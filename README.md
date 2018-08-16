@@ -6,10 +6,11 @@
 This is an integration of MongoDB with Google Place API Data. This integration is generated from MongoDB Atlas data that contains information about businesses (hotels, taxis, restaurants, hospitals). The main idea is to automatically enrich this data with up to date information from Google Places API, so you don't have to maintain their business information (address, phone number, opening hours, ratings).
 
 These are the versions with which this application has been created and tested:
--MongoDB 4.0.0 running on **AWS Europe (Frankfurt)**
--MongoDB Stitch running on **AWS US East 1**
+* MongoDB 4.0.0 running on **AWS Europe (Frankfurt)**
+* MongoDB Stitch running on **AWS US East 1**
 
 Created: *August 16, 2018*
+
 Last Updated: *August 16, 2018*
 
 
@@ -68,19 +69,24 @@ Documents located in your collection should follow these guidelines:
 4. Under Initialize a MongoDB Collection, add the collection where your business data will be (e.g. database mycompany, collection mycustomers)
 *NB: note that this app is designed so existing data will not be impacted, only added/updated data will be enriched with Google Places data*
 5. Under the Rules panel, edit Permissions to use no template, then enable Permissions for your data to be Read/Write for Stitch "default" user profile
-6. Under the Services panel, follow Add a Service > HTTP > Name it "GooglePlaces" > Add Incoming webhook > Add a name e.g. WH_GP > Use GET > Select Require Secret as Query Parameter and set your secret. Leave everything else as default (including Function Editor) and save your HTTP Service
+6. Under the Services panel
+    * Follow Add a Service and select HTTP
+    * Name it "GooglePlaces"
+    * Add Incoming webhook
+    * Add a name e.g. WH_GP, Use GET, Select Require Secret as Query Parameter and set your secret.
+    * Leave everything else as default (including Function Editor) and save your HTTP Service
 7. Under the Values panel, create a new Value for your Google API Key so it can be used across your triggers and functions. Call it GooglePlacesAPIKey
 
 ### b. Function1 - getGooglePlaceID
 
 1. Start with creating a new trigger:
-  * Triggers panel
-  * "Add Trigger"
-  * Name it getGooglePlaceID and enable it
-  * Trigger source details is your source collection, mycompany / mycustomers
-  * Operation type is Insert/Update/Replace
-  * Enable Full Document
-  * Create a new linked Function and call it getGooglePlaceID
+    * Triggers panel
+    * "Add Trigger"
+    * Name it getGooglePlaceID and enable it
+    * Trigger source details is your source collection, mycompany / mycustomers
+    * Operation type is Insert/Update/Replace
+    * Enable Full Document
+    * Create a new linked Function and call it getGooglePlaceID
 2. Advanced trigger options (**Very important**): the current design is made so the source and the destination collections impacted by the Stitch triggers are the same. Therefore, to avoid infinite loops, we must add indicators saying this Document has been processed. Add Match expression filter as follows.     
 ```
         { "fullDocument.name":{"$exists":true},
