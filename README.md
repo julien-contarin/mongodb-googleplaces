@@ -61,6 +61,8 @@ Documents located in your collection should follow these guidelines:
 * "isReferencedOnGoogle": somewhere in your business logic, you should add a flag about whether or not you want this particular business to be enriched using Google Places data. Could be a boolean or a string containing "Yes"/"No"
 * "isPopulatedOnGoogle": this first implementation only populates Google Places info once. This application adds this field saying this has been done. See Future Improvements section for how this could be moving forward
 
+## Build
+
 ### a. Initialize Stitch Application
 
 1. Go to Stitch on the left-hand panel of MongoDB Atlas interface
