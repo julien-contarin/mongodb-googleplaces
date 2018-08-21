@@ -11,7 +11,7 @@ These are the versions with which this application has been created and tested:
 
 Created: *August 16, 2018*
 
-Last Updated: *August 16, 2018*
+Last Updated: *August 21, 2018*
 
 
 ## Disclaimer
@@ -30,11 +30,11 @@ This is a MVP-type of application built to better materialize some of the benefi
 
 This application uses MongoDB Stitch to automatically fetch business data when MongoDB documents are created, updated or replaced.
 
-The application does two things sequentially, using triggers and http get services:
-1. if the business is referenced on Google, get business ID from Google Places API (get first search result using business name) and push to MongoDB document
+The application does two things sequentially, using a trigger and http get service:
+1. if the business is referenced on Google, get business ID from Google Places API (get first search result using business name)
 2. once we have business ID, populate MongoDB document with as much info as needed from said business from Google (address, phone number, opening hours, ratings)
 
-Businesses that are not found will go through step 1 but will remain unchanged.
+Businesses that are not found will go through step 1 and will remain unchanged.
 
 
 ## Prerequisites
@@ -50,16 +50,16 @@ Prepare a Google API Key using your GCP account
 
 See documentation:
 * MongoDB Stitch: https://docs.mongodb.com/stitch/
-* Google Place Search (used by function1): https://developers.google.com/places/web-service/search
-* Google Place Details (used by function2): https://developers.google.com/places/web-service/details
+* Google Place Search: https://developers.google.com/places/web-service/search
+* Google Place Details: https://developers.google.com/places/web-service/details
 
 
 ## Document structure
 
 Documents located in your collection should follow these guidelines:
 * "name": a field used to make the Google Place search. This should contain an intelligible business name. Hint: a manual Google Search using "name" should return the business you are looking for. Examples of valid names: "Empire State Building";
-* "isReferencedOnGoogle": somewhere in your business logic, you should add a flag about whether or not you want this particular business to be enriched using Google Places data. Could be a boolean or a string containing "Yes"/"No"
-* "isPopulatedOnGoogle": this first implementation only populates Google Places info once. This application adds this field saying this has been done. See Future Improvements section for how this could be moving forward
+* "isReferencedOnGoogle": somewhere in your business logic, you should add a flag about whether or not you want this particular business to be enriched using Google Places data. Could be a boolean or a string containing "Yes"/"No" (this documentation uses a boolean)
+
 
 ## Build
 
@@ -79,33 +79,23 @@ Documents located in your collection should follow these guidelines:
     * Leave everything else as default (including Function Editor) and save your HTTP Service
 7. Under the Values panel, create a new Value for your Google API Key so it can be used across your triggers and functions. Call it GooglePlacesAPIKey
 
-### b. Function1 - getGooglePlaceID
+### b. Function - getGooglePlaceInfo
 
 1. Start with creating a new trigger:
     * Triggers panel
     * "Add Trigger"
-    * Name it getGooglePlaceID and enable it
+    * Name it getGooglePlaceInfo and enable it
     * Trigger source details is your source collection, mycompany / mycustomers
     * Operation type is Insert/Update/Replace
     * Enable Full Document
-    * Create a new linked Function and call it getGooglePlaceID
+    * Create a new linked Function and call it getGooglePlaceInfo
 2. Advanced trigger options (**Very important**): the current design is made so the source and the destination collections impacted by the Stitch triggers are the same. Therefore, to avoid infinite loops, we must add indicators saying this Document has been processed. Add Match expression filter as follows.     
 ```
         { "fullDocument.name":{"$exists":true},
-          "fullDocument.isReferencedOnGoogle":"Yes",
-          "fullDocument.googlePlaceID":{"$exists":false}}
+          "fullDocument.isReferencedOnGoogle":true,
+          "fullDocument.googlePlaceInfo":{"$exists":false}}
 ```
-3. Edit getGooglePlaceID function using the *function1.getGooglePlaceID.js* file attached to this Github project (see **ACTION REQUIRED BELOW** comments in function body for guidance). Once you have made your updates, copy-paste in your Stitch function and save it.
-
-### c. Function2 - getGoogleAPIInfo
-
-1. Repeat b.1, name this second Trigger and associated function getGoogleAPIInfo
-2. Advanced trigger options (**Very important**): This time, set the trigger Match expression as follows:
-```
-        { "fullDocument.googlePlaceID":{"$exists":true},
-          "fullDocument.isPopulatedOnGoogle":{"$exists":false}}
-```
-3. Edit getGoogleAPIInfo function using the *function2_getGoogleAPIInfo.js* file (see **ACTION REQUIRED BELOW** comments in function body for guidance). Once you have made your updates, copy-paste in your Stitch function and save it.
+3. Edit getGooglePlaceInfo function using the *function.getGooglePlaceInfo.js* file attached to this Github project (see **ACTION REQUIRED BELOW** comments in function body for guidance). Once you have made your updates, copy-paste in your Stitch function and save it.
 
 
 ## Test
@@ -114,7 +104,7 @@ Documents located in your collection should follow these guidelines:
 2. Set the database: use *mycompany*
 3. Perform:
 ```
-        db.mycustomers.insert({"isReferencedOnGoogle":"Yes","name": "Empire State Building"})
+        db.mycustomers.insert({"isReferencedOnGoogle":true,"name": "Empire State Building"})
 ```
 4. After a few seconds, perform the following on the Shell (alternatively: use Compass with query *{name:"Empire State Building"}*):
 ```
@@ -130,6 +120,7 @@ Documents located in your collection should follow these guidelines:
 		      "formatted_address" : "350 5th Ave, New York, NY 10118, USA",
 		      "formatted_phone_number" : "(212) 736-3100",
 		      "rating" : 4.6,
+          "opening_hours": [...],
 		      [...]
 	         },
       	"googlegeoJSONcoordinates" : {
@@ -139,7 +130,9 @@ Documents located in your collection should follow these guidelines:
       		],
       		"type" : "Point"
       	},
-      	"isPopulatedOnGoogle" : "Yes"
+      	"isPopulatedOnGoogle" : "Yes",
+        "isPopulatedOnGoogle" : true,
+	      "populatedOn" : "Tue, 21 Aug 2018 09:02:47 UTC"
       }
 ```
 
@@ -155,11 +148,20 @@ Documents located in your collection should follow these guidelines:
 3. At the date this is being written, Stitch runs only in AWS US East 1. Consider latency between your Atlas region and this region to optimize throughput. Specifically, this will run best with Atlas clusters that are running on AWS in the US or in Western Europe.
 
 
+## Update Google Places information
+
+As stated in section b, right now Google API integration is rather static and only gets triggered when documents are Inserted, Updated or Replaced AND their content miss certain fields. This is to avoid infinite loops updating the same documents over and over.
+
+Here are ways which you can trigger a Google Places information update:
+* Anytime the "name" field is updated, you should consider performing a full $unset of fields populated by Google Places. This will avoid discrepancies between the current name and associated business information.
+* On a regular basis or on any update of the document, it can be worth retriggering
+* When this business Google Places info has not changed for 6 months, you may recheck
+
+Below is an example routine that will trigger a Google Places API population. Make sure to unset googlegeoJSONcoordinates as the $push operator will otherwise cumulate multiple sets of coordinates within the same array:
+```
+        db.mycustomers.updateOne({}, {$unset:{googlePlaceInfo:"",googlegeoJSONcoordinates:""}})
+```
+
 ## Future improvements
 
-As stated in b and c, right now Google API integration is rather static and only gets triggered when documents are Inserted, Updated or Replaced. Moreover, the match conditions for the triggers right now are designed so it is only done once.
-
-In the future, there could be other ways to sync documents to Google Places:
-* Update anytime the "name" field is updated
-* When Google Places info changes, update
-* When this business Google Places info has not changed for 6 months, recheck
+* The above *Update Google Places information* section could itself be done as a Trigger on Stitch, auto-checking MongoDB documents for health of their Google API up-to-dateness and accuracy
