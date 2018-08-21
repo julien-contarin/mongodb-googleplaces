@@ -40,9 +40,7 @@ exports = function(changeEvent) {
               collection.updateOne(
                 {"_id":fullDocument._id},
                 {$set:{
-                  "isPopulatedOnGoogle":true,
                   "populatedOn":Date(),
-                  "sendToElasticSearch": true,
                   "googlePlaceInfo.name":details_result.result.name,
                   "googlePlaceInfo.place_id":details_result.result.place_id,
                   "googlePlaceInfo.geometry":details_result.result.geometry,

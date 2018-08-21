@@ -130,8 +130,6 @@ Documents located in your collection should follow these guidelines:
       		],
       		"type" : "Point"
       	},
-      	"isPopulatedOnGoogle" : "Yes",
-        "isPopulatedOnGoogle" : true,
 	      "populatedOn" : "Tue, 21 Aug 2018 09:02:47 UTC"
       }
 ```
